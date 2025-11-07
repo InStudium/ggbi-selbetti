@@ -312,17 +312,20 @@ def load_css():
             vertical-align: middle;
         }}
         </style>
+        """, unsafe_allow_html=True)
+        
+        # Adicionar script JavaScript separadamente para evitar conflito com f-string
+        js_code = f"""
         <script>
-        // Forçar reload do CSS removendo cache
         console.log('CSS carregado - versão {CSS_VERSION}');
-        // Limpar cache do navegador
         if ('caches' in window) {{
             caches.keys().then(function(names) {{
                 for (let name of names) caches.delete(name);
             }});
         }}
         </script>
-        """.format(CSS_VERSION=CSS_VERSION), unsafe_allow_html=True)
+        """
+        st.markdown(js_code, unsafe_allow_html=True)
     else:
         # CSS sem background se imagem não existir
         st.markdown("""
