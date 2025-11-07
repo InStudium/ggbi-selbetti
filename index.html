@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Analytics - Selbetti</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-image: url('Imagens/Background Selbetti - G&G BI.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            max-width: 300px;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #1a1a1a;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: #1a1a1a;
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem 0;
+            border-bottom: 2px solid #FF6B35;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: #1a1a1a;
+            font-size: 1.3rem;
+            margin: 1.5rem 0 1rem 0;
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #FF6B35, transparent);
+            margin: 2rem 0;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #FF6B35;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 0.3rem;
+        }
+
+        .kpi-delta {
+            font-size: 0.85rem;
+            color: #004E89;
+            font-weight: 500;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .full-width-chart {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .footer {
+            text-align: center;
+            color: #666;
+            padding: 1rem;
+            margin-top: 2rem;
+            border-top: 1px solid #ddd;
+        }
+
+        @media (max-width: 1200px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="Imagens/Selbetti - Logo Principal.png" alt="Selbetti Logo" class="logo" onerror="this.style.display='none'">
+            <h1>📊 People Analytics - Painel Executivo</h1>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🎯 Indicadores Consolidados</h2>
+
+        <div id="loading" class="loading">
+            <p>Carregando dados...</p>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <!-- KPIs Primeira Linha -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">👥 Total de Funcionários</div>
+                    <div class="kpi-value" id="kpi-total-func"></div>
+                    <div class="kpi-delta" id="kpi-ativos-func"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">🔄 Taxa de Turnover</div>
+                    <div class="kpi-value" id="kpi-turnover"></div>
+                    <div class="kpi-delta" id="kpi-turnover-vol"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">💰 Custo de Desligamentos</div>
+                    <div class="kpi-value" id="kpi-custo"></div>
+                    <div class="kpi-delta" id="kpi-desligamentos"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">⚠️ Risco Médio de Rotatividade</div>
+                    <div class="kpi-value" id="kpi-risco"></div>
+                    <div class="kpi-delta">Score 0-100</div>
+                </div>
+            </div>
+
+            <!-- KPIs Segunda Linha -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">📚 Treinamentos</div>
+                    <div class="kpi-value" id="kpi-treinamentos"></div>
+                    <div class="kpi-delta" id="kpi-horas"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">🎯 PDIs</div>
+                    <div class="kpi-value" id="kpi-pdi"></div>
+                    <div class="kpi-delta" id="kpi-pdi-andamento"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">😊 Clima Organizacional</div>
+                    <div class="kpi-value" id="kpi-clima"></div>
+                    <div class="kpi-delta" id="kpi-nps"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">💡 Competências</div>
+                    <div class="kpi-value" id="kpi-competencias"></div>
+                    <div class="kpi-delta" id="kpi-gaps"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <h2>📈 Visão Geral por Módulo</h2>
+
+            <!-- Gráficos -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>🔄 Turnover por Tipo</h3>
+                    <div id="chart-turnover"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>📚 Treinamentos por Status</h3>
+                    <div id="chart-td"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>🎯 Status dos PDIs</h3>
+                    <div id="chart-pdi"></div>
+                </div>
+                <div class="chart-container">
+                    <h3>😊 Evolução do Clima</h3>
+                    <div id="chart-clima"></div>
+                </div>
+            </div>
+
+            <div class="full-width-chart">
+                <h3>👥 Distribuição de Funcionários por Setor</h3>
+                <div id="chart-setor"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>People Analytics Selbetti | Gente & Gestão | © 2024</p>
+        </div>
+    </div>
+
+    <script>
+        // Função para formatar números
+        function formatNumber(num) {
+            return new Intl.NumberFormat('pt-BR').format(num);
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(num);
+        }
+
+        // Carregar dados CSV
+        async function loadCSV(file) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true,
+                    download: true,
+                    complete: (results) => {
+                        resolve(results.data);
+                    },
+                    error: (error) => {
+                        reject(error);
+                    }
+                });
+            });
+        }
+
+        // Carregar todos os dados
+        async function loadAllData() {
+            try {
+                const [funcionarios, turnover, td, pdi, clima, inovacao] = await Promise.all([
+                    loadCSV('Banco Dados/funcionarios.csv'),
+                    loadCSV('Banco Dados/turnover.csv'),
+                    loadCSV('Banco Dados/td.csv'),
+                    loadCSV('Banco Dados/pdi.csv'),
+                    loadCSV('Banco Dados/clima.csv'),
+                    loadCSV('Banco Dados/inovacao_competencias.csv')
+                ]);
+
+                return { funcionarios, turnover, td, pdi, clima, inovacao };
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                document.getElementById('loading').innerHTML = '<p style="color: red;">Erro ao carregar dados. Verifique se os arquivos CSV estão na pasta "Banco Dados"</p>';
+                return null;
+            }
+        }
+
+        // Calcular KPIs
+        function calculateKPIs(data) {
+            // Funcionários
+            const funcionarios = data.funcionarios;
+            const ativos = funcionarios.filter(f => f.Status === 'Ativo');
+            const totalFunc = funcionarios.length;
+            const totalAtivos = ativos.length;
+
+            // Turnover
+            const turnover = data.turnover;
+            const turnoverReal = turnover.filter(t => t.Data_Desligamento && t.Data_Desligamento !== '');
+            const turnoverVoluntario = turnoverReal.filter(t => t.Tipo_Turnover === 'Voluntário').length;
+            const taxaTurnover = totalFunc > 0 ? (turnoverReal.length / totalFunc) * 100 : 0;
+            const custoTotal = turnoverReal.reduce((sum, t) => sum + parseFloat(t.Custo_Desligamento || 0), 0);
+            const riscoMedio = turnover.reduce((sum, t) => sum + parseFloat(t.Risco_Rotatividade || 0), 0) / turnover.length;
+
+            // T&D
+            const td = data.td;
+            const tdConcluidos = td.filter(t => t.Status === 'Concluído').length;
+            const horasTotais = td.reduce((sum, t) => sum + parseFloat(t.Horas_Capacitacao || 0), 0);
+
+            // PDI
+            const pdi = data.pdi;
+            const pdiConcluidos = pdi.filter(p => p.Status === 'Concluído').length;
+            const pdiAndamento = pdi.filter(p => p.Status === 'Em Andamento').length;
+            const taxaConclusaoPDI = pdi.length > 0 ? (pdiConcluidos / pdi.length) * 100 : 0;
+
+            // Clima
+            const clima = data.clima;
+            const climaMedio = clima.reduce((sum, c) => sum + parseFloat(c.Resultado_Pesquisa_Clima || 0), 0) / clima.length;
+            const npsMedio = clima.reduce((sum, c) => sum + parseFloat(c.NPS_Lideranca || 0), 0) / clima.length;
+
+            // Competências
+            const inovacao = data.inovacao;
+            const gapsCriticos = inovacao.filter(i => i.Gap_Critico === 'True' || i.Gap_Critico === true).length;
+            const nivelMedio = inovacao.reduce((sum, i) => sum + parseFloat(i.Nivel_Competencia || 0), 0) / inovacao.length;
+
+            return {
+                totalFunc,
+                totalAtivos,
+                taxaTurnover,
+                turnoverVoluntario,
+                custoTotal,
+                riscoMedio,
+                tdConcluidos,
+                horasTotais,
+                taxaConclusaoPDI,
+                pdiAndamento,
+                climaMedio,
+                npsMedio,
+                nivelMedio,
+                gapsCriticos,
+                turnoverReal,
+                td,
+                pdi,
+                clima,
+                funcionarios: ativos
+            };
+        }
+
+        // Atualizar KPIs
+        function updateKPIs(kpis) {
+            document.getElementById('kpi-total-func').textContent = formatNumber(kpis.totalFunc);
+            document.getElementById('kpi-ativos-func').textContent = `${formatNumber(kpis.totalAtivos)} ativos`;
+
+            document.getElementById('kpi-turnover').textContent = `${kpis.taxaTurnover.toFixed(1)}%`;
+            document.getElementById('kpi-turnover-vol').textContent = `${kpis.turnoverVoluntario} voluntários`;
+
+            document.getElementById('kpi-custo').textContent = formatCurrency(kpis.custoTotal);
+            document.getElementById('kpi-desligamentos').textContent = `${kpis.turnoverReal.length} desligamentos`;
+
+            document.getElementById('kpi-risco').textContent = kpis.riscoMedio.toFixed(1);
+
+            document.getElementById('kpi-treinamentos').textContent = `${formatNumber(kpis.tdConcluidos)} concluídos`;
+            document.getElementById('kpi-horas').textContent = `${formatNumber(Math.round(kpis.horasTotais))} horas`;
+
+            document.getElementById('kpi-pdi').textContent = `${kpis.taxaConclusaoPDI.toFixed(1)}% concluídos`;
+            document.getElementById('kpi-pdi-andamento').textContent = `${kpis.pdiAndamento} em andamento`;
+
+            document.getElementById('kpi-clima').textContent = `${kpis.climaMedio.toFixed(1)}/10`;
+            document.getElementById('kpi-nps').textContent = `NPS: ${kpis.npsMedio.toFixed(1)}`;
+
+            document.getElementById('kpi-competencias').textContent = `${kpis.nivelMedio.toFixed(1)}/10`;
+            document.getElementById('kpi-gaps').textContent = `${formatNumber(kpis.gapsCriticos)} gaps críticos`;
+        }
+
+        // Criar gráficos
+        function createCharts(data, kpis) {
+            // Gráfico 1: Turnover por Tipo
+            const turnoverTipo = {};
+            kpis.turnoverReal.forEach(t => {
+                const tipo = t.Tipo_Turnover || 'Não especificado';
+                turnoverTipo[tipo] = (turnoverTipo[tipo] || 0) + 1;
+            });
+
+            const turnoverData = [{
+                values: Object.values(turnoverTipo),
+                labels: Object.keys(turnoverTipo),
+                type: 'pie',
+                marker: {
+                    colors: ['#FF6B35', '#004E89']
+                }
+            }];
+
+            Plotly.newPlot('chart-turnover', turnoverData, {
+                height: 300,
+                showlegend: true
+            }, {responsive: true});
+
+            // Gráfico 2: Treinamentos por Status
+            const tdStatus = {};
+            kpis.td.forEach(t => {
+                const status = t.Status || 'Não especificado';
+                tdStatus[status] = (tdStatus[status] || 0) + 1;
+            });
+
+            const tdData = [{
+                x: Object.keys(tdStatus),
+                y: Object.values(tdStatus),
+                type: 'bar',
+                marker: {
+                    color: ['#00C853', '#FF6B35', '#FFA500', '#808080']
+                }
+            }];
+
+            Plotly.newPlot('chart-td', tdData, {
+                height: 300,
+                showlegend: false,
+                xaxis: {title: 'Status'},
+                yaxis: {title: 'Quantidade'}
+            }, {responsive: true});
+
+            // Gráfico 3: Status dos PDIs
+            const pdiStatus = {};
+            kpis.pdi.forEach(p => {
+                const status = p.Status || 'Não especificado';
+                pdiStatus[status] = (pdiStatus[status] || 0) + 1;
+            });
+
+            const pdiData = [{
+                x: Object.keys(pdiStatus),
+                y: Object.values(pdiStatus),
+                type: 'bar',
+                marker: {
+                    color: ['#FF6B35', '#004E89', '#FFA500', '#808080']
+                }
+            }];
+
+            Plotly.newPlot('chart-pdi', pdiData, {
+                height: 300,
+                showlegend: false,
+                xaxis: {title: 'Status'},
+                yaxis: {title: 'Quantidade'}
+            }, {responsive: true});
+
+            // Gráfico 4: Evolução do Clima
+            const climaPorMes = {};
+            kpis.clima.forEach(c => {
+                if (c.Data_Pesquisa) {
+                    const date = new Date(c.Data_Pesquisa);
+                    const mes = date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'short' });
+                    if (!climaPorMes[mes]) {
+                        climaPorMes[mes] = { sum: 0, count: 0 };
+                    }
+                    climaPorMes[mes].sum += parseFloat(c.Resultado_Pesquisa_Clima || 0);
+                    climaPorMes[mes].count += 1;
+                }
+            });
+
+            const meses = Object.keys(climaPorMes).sort();
+            const valores = meses.map(m => climaPorMes[m].sum / climaPorMes[m].count);
+
+            const climaData = [{
+                x: meses,
+                y: valores,
+                type: 'scatter',
+                mode: 'lines+markers',
+                marker: { color: '#FF6B35', size: 8 },
+                line: { color: '#FF6B35', width: 2 }
+            }];
+
+            Plotly.newPlot('chart-clima', climaData, {
+                height: 300,
+                showlegend: false,
+                xaxis: {title: 'Período'},
+                yaxis: {title: 'Score Clima'}
+            }, {responsive: true});
+
+            // Gráfico 5: Distribuição por Setor
+            const setores = {};
+            kpis.funcionarios.forEach(f => {
+                const setor = f.Setor || 'Não especificado';
+                setores[setor] = (setores[setor] || 0) + 1;
+            });
+
+            const setoresSorted = Object.entries(setores)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 12);
+
+            const setorData = [{
+                x: setoresSorted.map(s => s[0]),
+                y: setoresSorted.map(s => s[1]),
+                type: 'bar',
+                marker: {
+                    color: setoresSorted.map(s => s[1]),
+                    colorscale: 'Oranges'
+                }
+            }];
+
+            Plotly.newPlot('chart-setor', setorData, {
+                height: 400,
+                showlegend: false,
+                xaxis: {title: 'Setor'},
+                yaxis: {title: 'Quantidade'}
+            }, {responsive: true});
+        }
+
+        // Inicializar dashboard
+        async function init() {
+            const data = await loadAllData();
+            if (data) {
+                const kpis = calculateKPIs(data);
+                updateKPIs(kpis);
+                createCharts(data, kpis);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            }
+        }
+
+        // Iniciar quando a página carregar
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
